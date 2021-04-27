@@ -6,7 +6,7 @@ import Panel from './Panel.js'
 
 class Stats {
 
-	constructor() {
+	constructor({ showMinMax = true } = {}) {
 		this.mode = 0;
 		this.beginTime = performance.now();
 		this.prevTime = this.beginTime;
@@ -24,12 +24,12 @@ class Stats {
 		} );
 		this.dom = container;
 
-		this.fpsPanel = this.addPanel( new Panel( 'FPS', '#0ff', '#002' ) );
-		this.msPanel = this.addPanel( new Panel( 'MS', '#0f0', '#020' ) );
+		this.fpsPanel = this.addPanel( new Panel( 'FPS', '#0ff', '#002', showMinMax ) );
+		this.msPanel = this.addPanel( new Panel( 'MS', '#0f0', '#020', showMinMax ) );
 
 		if ( performance && performance.memory ) {
 
-			this.memPanel = this.addPanel( new Panel( 'MB', '#f08', '#201' ) );
+			this.memPanel = this.addPanel( new Panel( 'MB', '#f08', '#201', showMinMax ) );
 
 		}
 

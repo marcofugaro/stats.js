@@ -1,7 +1,7 @@
 
 class Panel {
 
-  constructor( name, fg, bg ) {
+  constructor( name, fg, bg, showMinMax = true) {
 
     let min = Infinity;
     let max = 0;
@@ -50,7 +50,7 @@ class Panel {
 			context.fillText(`${round( value )}`, TEXT_X + 10 * PR, TEXT_Y );
 			context.textAlign = 'left';
 			const minMax = `(${round( min )}-${round( max )})`;
-      context.fillText(`${name} ${minMax}`, TEXT_X + 12 * PR, TEXT_Y );
+      context.fillText(`${name} ${showMinMax ? minMax : ''}`, TEXT_X + 12 * PR, TEXT_Y );
 
       context.drawImage( canvas, GRAPH_X + PR, GRAPH_Y, GRAPH_WIDTH - PR, GRAPH_HEIGHT, GRAPH_X, GRAPH_Y, GRAPH_WIDTH - PR, GRAPH_HEIGHT );
 
