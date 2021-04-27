@@ -6,7 +6,7 @@ import Panel from './Panel.js'
 
 class Stats {
 
-	constructor({ showMinMax = true } = {}) {
+	constructor({ showMinMax = true, context } = {}) {
 		this.mode = 0;
 		this.beginTime = performance.now();
 		this.prevTime = this.beginTime;
@@ -33,20 +33,29 @@ class Stats {
 
 		}
 
+		this.queryExtension = context && context.getExtension('EXT_disjoint_timer_query_webgl2')
+		if ( this.queryExtension ) {
+
+			this.gpuPanel = this.addPanel( new Panel( 'MS GPU', '#f90', '#210', showMinMax ) );
+
+			this.context = context;
+
+		}
+
 
 		this.showPanel( 0 );
 
 	}
 
 
-	 addPanel( panel ) {
+	addPanel( panel ) {
 
 		this.dom.appendChild( panel.dom );
 		return panel;
 
 	}
 
-	 showPanel( id ) {
+	showPanel( id ) {
 
 		for ( var i = 0; i < this.dom.children.length; i ++ ) {
 
@@ -63,6 +72,39 @@ class Stats {
 
 		this.beginTime = performance.now();
 
+		if ( this.gpuPanel ) {
+
+			// Setup
+			this.queryCreated = false;
+			let queryResultAvailable = false;
+
+			// Test if query result available
+			if ( this.query ) {
+
+				queryResultAvailable = this.context.getQueryParameter(this.query, this.context.QUERY_RESULT_AVAILABLE);
+
+				if ( queryResultAvailable ) {
+
+					const maxValue = 30;
+					const ns = this.context.getQueryParameter(this.query, this.context.QUERY_RESULT);
+					const panelValue = Math.min(ns / 1000 / 1000, maxValue);
+
+					this.gpuPanel.update(panelValue, maxValue);
+
+				}
+			}
+
+			// If query result available or no query yet
+			if ( queryResultAvailable || !this.query ) {
+
+					// Create new query
+					this.queryCreated = true;
+					this.query = this.context.createQuery();
+					this.context.beginQuery(this.queryExtension.TIME_ELAPSED_EXT, this.query);
+
+			}
+
+		}
 	}
 
 	end() {
@@ -86,6 +128,13 @@ class Stats {
 				this.memPanel.update( memory.usedJSHeapSize / 1048576, memory.jsHeapSizeLimit / 1048576 );
 
 			}
+
+		}
+
+		// End the query (result will be available "later")
+		if ( this.queryCreated ) {
+
+				this.context.endQuery(this.queryExtension.TIME_ELAPSED_EXT)
 
 		}
 
