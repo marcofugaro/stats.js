@@ -1,56 +1,17 @@
-stats.js
+Fork of [mrdoob/stats.js](https://github.com/mrdoob/stats.js)
 ========
 
-#### JavaScript Performance Monitor ####
-
-This class provides a simple info box that will help you monitor your code performance.
-
-* **FPS** Frames rendered in the last second. The higher the number the better.
-* **MS** Milliseconds needed to render a frame. The lower the number the better.
-* **MB** MBytes of allocated memory. (Run Chrome with `--enable-precise-memory-info`)
-* **CUSTOM** User-defined panel support.
-
-
-### Screenshots ###
-
-![fps.png](https://raw.githubusercontent.com/mrdoob/stats.js/master/files/fps.png)
-![ms.png](https://raw.githubusercontent.com/mrdoob/stats.js/master/files/ms.png)
-![mb.png](https://raw.githubusercontent.com/mrdoob/stats.js/master/files/mb.png)
-![custom.png](https://raw.githubusercontent.com/mrdoob/stats.js/master/files/custom.png)
-
-
-### Installation ###
-```bash
-npm install stats.js
+```
+npm install stats.js@marcofugaro/stats.js
 ```
 
-### Usage ###
+### CHANGES
 
-```javascript
-var stats = new Stats();
-stats.showPanel( 1 ); // 0: fps, 1: ms, 2: mb, 3+: custom
-document.body.appendChild( stats.dom );
+- Convert to ES6 classes
+- Add GPU MS panel from [brunosimon](https://github.com/brunosimon/threejs-points-physical-material/blob/main/src/javascript/Utils/Stats.js): `new Stats({ context: renderer.getContext() })`
+- Add option to hide min and max: `new Stats({ showMinMax: false })`
+- Fix jumping around of text:
 
-function animate() {
-
-	stats.begin();
-
-	// monitored code goes here
-
-	stats.end();
-
-	requestAnimationFrame( animate );
-
-}
-
-requestAnimationFrame( animate );
-```
-
-
-### Bookmarklet ###
-
-You can add this code to any page using the following bookmarklet:
-
-```javascript
-javascript:(function(){var script=document.createElement('script');script.onload=function(){var stats=new Stats();document.body.appendChild(stats.dom);requestAnimationFrame(function loop(){stats.update();requestAnimationFrame(loop)});};script.src='//mrdoob.github.io/stats.js/build/stats.min.js';document.head.appendChild(script);})()
-```
+| Before | After |
+|-------|--------|
+| <img src="files/twitch-before.gif" /> | <img src="files/twitch-after.gif" /> |
