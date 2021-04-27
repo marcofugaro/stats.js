@@ -1,179 +1,228 @@
 (function (global, factory) {
-	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
-	typeof define === 'function' && define.amd ? define(factory) :
-	(global.Stats = factory());
-}(this, (function () { 'use strict';
+	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+	typeof define === 'function' && define.amd ? define(['exports'], factory) :
+	(global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.Stats = {}));
+}(this, (function (exports) { 'use strict';
 
-/**
- * @author mrdoob / http://mrdoob.com/
- */
+	class Panel {
 
-var Stats = function () {
+	  constructor( name, fg, bg, showMinMax = true) {
 
-	var mode = 0;
+	    let min = Infinity;
+	    let max = 0;
+	    const round = Math.round;
+	    const PR = round( window.devicePixelRatio || 1 );
 
-	var container = document.createElement( 'div' );
-	container.style.cssText = 'position:fixed;top:0;left:0;cursor:pointer;opacity:0.9;z-index:10000';
-	container.addEventListener( 'click', function ( event ) {
+	    const WIDTH = 80 * PR, HEIGHT = 48 * PR,
+	        TEXT_X = 3 * PR, TEXT_Y = 2 * PR,
+	        GRAPH_X = 3 * PR, GRAPH_Y = 15 * PR,
+	        GRAPH_WIDTH = 74 * PR, GRAPH_HEIGHT = 30 * PR;
 
-		event.preventDefault();
-		showPanel( ++ mode % container.children.length );
+	    const canvas = document.createElement( 'canvas' );
+	    canvas.width = WIDTH;
+	    canvas.height = HEIGHT;
+	    canvas.style.cssText = 'width:80px;height:48px';
+	    this.dom = canvas;
 
-	}, false );
+	    const context = canvas.getContext( '2d' );
+	    context.font = `bold ${ 9 * PR }px Helvetica,Arial,sans-serif`;
+	    context.textBaseline = 'top';
 
-	//
+	    context.fillStyle = bg;
+	    context.fillRect( 0, 0, WIDTH, HEIGHT );
 
-	function addPanel( panel ) {
+	    context.fillStyle = fg;
+	    context.fillText( name, TEXT_X, TEXT_Y );
+	    context.fillRect( GRAPH_X, GRAPH_Y, GRAPH_WIDTH, GRAPH_HEIGHT );
 
-		container.appendChild( panel.dom );
-		return panel;
+	    context.fillStyle = bg;
+	    context.globalAlpha = 0.9;
+	    context.fillRect( GRAPH_X, GRAPH_Y, GRAPH_WIDTH, GRAPH_HEIGHT );
+
+
+
+	    this.update = ( value, maxValue ) => {
+
+	      min = Math.min( min, value );
+	      max = Math.max( max, value );
+
+	      context.fillStyle = bg;
+	      context.globalAlpha = 1;
+	      context.fillRect( 0, 0, WIDTH, GRAPH_Y );
+	      context.fillStyle = fg;
+
+				context.textAlign = 'right';
+				context.fillText(`${round( value )}`, TEXT_X + 10 * PR, TEXT_Y );
+				context.textAlign = 'left';
+				const minMax = `(${round( min )}-${round( max )})`;
+	      context.fillText(`${name} ${showMinMax ? minMax : ''}`, TEXT_X + 12 * PR, TEXT_Y );
+
+	      context.drawImage( canvas, GRAPH_X + PR, GRAPH_Y, GRAPH_WIDTH - PR, GRAPH_HEIGHT, GRAPH_X, GRAPH_Y, GRAPH_WIDTH - PR, GRAPH_HEIGHT );
+
+	      context.fillRect( GRAPH_X + GRAPH_WIDTH - PR, GRAPH_Y, PR, GRAPH_HEIGHT );
+
+	      context.fillStyle = bg;
+	      context.globalAlpha = 0.9;
+	      context.fillRect( GRAPH_X + GRAPH_WIDTH - PR, GRAPH_Y, PR, round( ( 1 - ( value / maxValue ) ) * GRAPH_HEIGHT ) );
+
+	    };
+	  }
 
 	}
 
-	function showPanel( id ) {
+	/**
+	 * @author mrdoob / http://mrdoob.com/
+	 */
 
-		for ( var i = 0; i < container.children.length; i ++ ) {
+	class Stats {
 
-			container.children[ i ].style.display = i === id ? 'block' : 'none';
+		constructor({ showMinMax = true, context } = {}) {
+			this.mode = 0;
+			this.beginTime = performance.now();
+			this.prevTime = this.beginTime;
+			this.frames = 0;
+
+			this.REVISION = 16;
+
+			const container = document.createElement( 'div' );
+			container.style.cssText = 'position:fixed;top:0;left:0;cursor:pointer;opacity:0.9;z-index:10000';
+			container.addEventListener( 'click', ( event ) => {
+
+				event.preventDefault();
+				this.showPanel( ++ this.mode % container.children.length );
+
+			} );
+			this.dom = container;
+
+			this.fpsPanel = this.addPanel( new Panel( 'FPS', '#0ff', '#002', showMinMax ) );
+			this.msPanel = this.addPanel( new Panel( 'MS', '#0f0', '#020', showMinMax ) );
+
+			if ( performance && performance.memory ) {
+
+				this.memPanel = this.addPanel( new Panel( 'MB', '#f08', '#201', showMinMax ) );
+
+			}
+
+			this.queryExtension = context && context.getExtension('EXT_disjoint_timer_query_webgl2');
+			if ( this.queryExtension ) {
+
+				this.gpuPanel = this.addPanel( new Panel( 'MS GPU', '#f90', '#210', showMinMax ) );
+
+				this.context = context;
+
+			}
+
+
+			this.showPanel( 0 );
 
 		}
 
-		mode = id;
 
-	}
+		addPanel( panel ) {
 
-	//
+			this.dom.appendChild( panel.dom );
+			return panel;
 
-	var beginTime = ( performance || Date ).now(), prevTime = beginTime, frames = 0;
+		}
 
-	var fpsPanel = addPanel( new Stats.Panel( 'FPS', '#0ff', '#002' ) );
-	var msPanel = addPanel( new Stats.Panel( 'MS', '#0f0', '#020' ) );
+		showPanel( id ) {
 
-	if ( self.performance && self.performance.memory ) {
+			for ( var i = 0; i < this.dom.children.length; i ++ ) {
 
-		var memPanel = addPanel( new Stats.Panel( 'MB', '#f08', '#201' ) );
+				this.dom.children[ i ].style.display = i === id ? 'block' : 'none';
 
-	}
+			}
 
-	showPanel( 0 );
+			this.mode = id;
 
-	return {
+		}
 
-		REVISION: 16,
 
-		dom: container,
+		begin() {
 
-		addPanel: addPanel,
-		showPanel: showPanel,
+			this.beginTime = performance.now();
 
-		begin: function () {
+			if ( this.gpuPanel ) {
 
-			beginTime = ( performance || Date ).now();
+				// Setup
+				this.queryCreated = false;
+				let queryResultAvailable = false;
 
-		},
+				// Test if query result available
+				if ( this.query ) {
 
-		end: function () {
+					queryResultAvailable = this.context.getQueryParameter(this.query, this.context.QUERY_RESULT_AVAILABLE);
 
-			frames ++;
+					if ( queryResultAvailable ) {
 
-			var time = ( performance || Date ).now();
+						const maxValue = 30;
+						const ns = this.context.getQueryParameter(this.query, this.context.QUERY_RESULT);
+						const panelValue = Math.min(ns / 1000 / 1000, maxValue);
 
-			msPanel.update( time - beginTime, 200 );
+						this.gpuPanel.update(panelValue, maxValue);
 
-			if ( time >= prevTime + 1000 ) {
+					}
+				}
 
-				fpsPanel.update( ( frames * 1000 ) / ( time - prevTime ), 100 );
+				// If query result available or no query yet
+				if ( queryResultAvailable || !this.query ) {
 
-				prevTime = time;
-				frames = 0;
+						// Create new query
+						this.queryCreated = true;
+						this.query = this.context.createQuery();
+						this.context.beginQuery(this.queryExtension.TIME_ELAPSED_EXT, this.query);
 
-				if ( memPanel ) {
+				}
 
-					var memory = performance.memory;
-					memPanel.update( memory.usedJSHeapSize / 1048576, memory.jsHeapSizeLimit / 1048576 );
+			}
+		}
+
+		end() {
+
+			this.frames ++;
+
+			const time = performance.now();
+
+			this.msPanel.update( time - this.beginTime, 200 );
+
+			if ( time >= this.prevTime + 1000 ) {
+
+				this.fpsPanel.update( ( this.frames * 1000 ) / ( time - this.prevTime ), 100 );
+
+				this.prevTime = time;
+				this.frames = 0;
+
+				if ( this.memPanel ) {
+
+					const memory = performance.memory;
+					this.memPanel.update( memory.usedJSHeapSize / 1048576, memory.jsHeapSizeLimit / 1048576 );
 
 				}
 
 			}
 
+			// End the query (result will be available "later")
+			if ( this.queryCreated ) {
+
+					this.context.endQuery(this.queryExtension.TIME_ELAPSED_EXT);
+
+			}
+
 			return time;
-
-		},
-
-		update: function () {
-
-			beginTime = this.end();
-
-		},
-
-		// Backwards Compatibility
-
-		domElement: container,
-		setMode: showPanel
-
-	};
-
-};
-
-Stats.Panel = function ( name, fg, bg ) {
-
-	var min = Infinity, max = 0, round = Math.round;
-	var PR = round( window.devicePixelRatio || 1 );
-
-	var WIDTH = 80 * PR, HEIGHT = 48 * PR,
-			TEXT_X = 3 * PR, TEXT_Y = 2 * PR,
-			GRAPH_X = 3 * PR, GRAPH_Y = 15 * PR,
-			GRAPH_WIDTH = 74 * PR, GRAPH_HEIGHT = 30 * PR;
-
-	var canvas = document.createElement( 'canvas' );
-	canvas.width = WIDTH;
-	canvas.height = HEIGHT;
-	canvas.style.cssText = 'width:80px;height:48px';
-
-	var context = canvas.getContext( '2d' );
-	context.font = 'bold ' + ( 9 * PR ) + 'px Helvetica,Arial,sans-serif';
-	context.textBaseline = 'top';
-
-	context.fillStyle = bg;
-	context.fillRect( 0, 0, WIDTH, HEIGHT );
-
-	context.fillStyle = fg;
-	context.fillText( name, TEXT_X, TEXT_Y );
-	context.fillRect( GRAPH_X, GRAPH_Y, GRAPH_WIDTH, GRAPH_HEIGHT );
-
-	context.fillStyle = bg;
-	context.globalAlpha = 0.9;
-	context.fillRect( GRAPH_X, GRAPH_Y, GRAPH_WIDTH, GRAPH_HEIGHT );
-
-	return {
-
-		dom: canvas,
-
-		update: function ( value, maxValue ) {
-
-			min = Math.min( min, value );
-			max = Math.max( max, value );
-
-			context.fillStyle = bg;
-			context.globalAlpha = 1;
-			context.fillRect( 0, 0, WIDTH, GRAPH_Y );
-			context.fillStyle = fg;
-			context.fillText( round( value ) + ' ' + name + ' (' + round( min ) + '-' + round( max ) + ')', TEXT_X, TEXT_Y );
-
-			context.drawImage( canvas, GRAPH_X + PR, GRAPH_Y, GRAPH_WIDTH - PR, GRAPH_HEIGHT, GRAPH_X, GRAPH_Y, GRAPH_WIDTH - PR, GRAPH_HEIGHT );
-
-			context.fillRect( GRAPH_X + GRAPH_WIDTH - PR, GRAPH_Y, PR, GRAPH_HEIGHT );
-
-			context.fillStyle = bg;
-			context.globalAlpha = 0.9;
-			context.fillRect( GRAPH_X + GRAPH_WIDTH - PR, GRAPH_Y, PR, round( ( 1 - ( value / maxValue ) ) * GRAPH_HEIGHT ) );
 
 		}
 
-	};
+		update() {
 
-};
+			this.beginTime = this.end();
 
-return Stats;
+		}
+
+	}
+
+	exports.Panel = Panel;
+	exports.default = Stats;
+
+	Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
