@@ -13,9 +13,7 @@
     "src"
   ],
   "scripts": {
-    "build": "rollup -c",
-    "build-closure": "rollup -c && google-closure-compiler --language_in=ECMASCRIPT5_STRICT --js build/stats.js --js_output_file build/stats.min.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "rollup -c"
   },
   "keywords": [
     "performance",
@@ -29,7 +27,7 @@
   },
   "homepage": "https://github.com/mrdoob/stats.js",
   "devDependencies": {
-    "rollup": "^2.3.2",
-    "google-closure-compiler": "20200224.0.0"
+    "rollup": "^2.45.2",
+    "rollup-plugin-terser": "^7.0.2"
   }
 }
