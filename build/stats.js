@@ -51,7 +51,7 @@
 	      context.fillRect( 0, 0, WIDTH, GRAPH_Y );
 	      context.fillStyle = fg;
 
-	      const letters = Math.max(2, value.length); // clamp them so they don't jump around
+	      const letters = Math.max(2, String(round( value )).length); // clamp them so they don't jump around
 				context.textAlign = 'right';
 				context.fillText(`${round( value )}`, TEXT_X + letters * 5 * PR, TEXT_Y );
 				context.textAlign = 'left';
